@@ -1,0 +1,54 @@
+default:
+  services:
+    - name: selenium/standalone-chrome:latest
+      alias: chrome
+  image: python:3.12-slim
+
+stages:
+  - test
+  - report
+
+test:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - when: manual
+  stage: test
+  script:
+    # Install required packages
+    - apt-get update \
+      && apt-get install -y build-essential libpq-dev \
+      && apt-get install -y postgresql postgresql-client gcc
+    # Install psycopg2
+    - pip install psycopg2-binary --quiet
+
+    # Install project dependencies
+    - pip install -r requirements.txt --quiet
+
+    # Execute test and generate report
+    # (pytest launch config - check pyproject.toml)
+    - pytest
+        --headless
+        --remote
+        -m="${PYTEST_MARKER}"
+
+  artifacts:
+    when: always
+    paths:
+      - "allure-results"
+
+allure:
+  stage: report
+  image: frankescobar/allure-docker-service
+  needs:
+    - test
+  script:
+    # Generate Allure Report to single HTML file
+    - allure generate --single-file -c ./allure-results -o ./allure-report
+  artifacts:
+    name: "test_run_report_${CI_JOB_STARTED_AT}_${CI_JOB_STATUS}"
+    paths:
+      - ./allure-report
+    expire_in: 1 day
+  rules:
+    - when: on_success
+

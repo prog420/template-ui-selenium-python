@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--basetemp=logs",
+    "--alluredir=allure-results",
+    "-vs",
+]
+markers = [
+    "wip", # Work In Progress (test is not finished)
+]
